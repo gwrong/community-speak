@@ -75,7 +75,7 @@ class MarkovLearner():
         with open(fileName, 'r') as wordFile:
             fileString = wordFile.read().replace('\n', ' ')
 
-        return [token for token in tokenizer.tokenize(fileString) if token != 'Â']
+        return [token for token in tokenizer.tokenize(fileString) if token != "'" and token != '"' and token != 'Â']
 
     '''
     Generates the next token in the sentence given the current state
@@ -148,6 +148,14 @@ if __name__ == "__main__":
     gen = MarkovLearner("HuckleberryFin.txt")
 
     outputFile = open('random_huckleberry.txt', 'w')
+    iterations = 10
+    for x in range(iterations):
+        outputFile.write(gen.generateParagraph() + '\n')
+    outputFile.close()
+
+    gen = MarkovLearner("JustinBieber.txt")
+
+    outputFile = open('random_bieber.txt', 'w')
     iterations = 10
     for x in range(iterations):
         outputFile.write(gen.generateParagraph() + '\n')
