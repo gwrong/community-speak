@@ -1,6 +1,10 @@
 from nltk.tokenize import TweetTokenizer
 from collections import defaultdict
+from collections import deque
 import random
+
+#sentence start, use all end punctuation
+#
 
 class MarkovLearner():
 
@@ -11,7 +15,8 @@ class MarkovLearner():
     #sentenceStartWords
     #nextTermFrequency
 
-    def __init__(self, fileName):
+    def __init__(self, fileName, length = 1):
+        self.length = length
         self.train(fileName)
 
     '''
@@ -21,26 +26,29 @@ class MarkovLearner():
         
         tokens = self.tokenizeFile(fileName)
         self.tokens = tokens
-        print('TOkens: ' + str(self.tokens))
-        self.saveSentenceStartWords(tokens)
+        #print('TOkens: ' + str(self.tokens))
+        self.saveSentenceStarts()
         #print(self.tokens)
         nextTermFrequency = dict()
-        first = True
 
-        present = None
+        lengthCounter = 0
+        present = deque()
         future = None
         for token in tokens:
 
-            if (first):
-                first = False
-                present = token
+            if (lengthCounter < self.length):
+                present.append(token)
+                lengthCounter += 1
             else:
                 future = token
-                if (present not in nextTermFrequency):
-                    nextTermFrequency[present] = dict()
-                nextTermFrequency[present][future] = nextTermFrequency[present].get(future, 0) + 1
-                present = future
+                presentTuple = self.convertToTuple(present)
+                if (presentTuple not in nextTermFrequency):
+                    nextTermFrequency[presentTuple] = dict()
+                nextTermFrequency[presentTuple][future] = nextTermFrequency[presentTuple].get(future, 0) + 1
+                present.popleft()
+                present.append(future)
 
+        #print(str(nextTermFrequency))
         for presentTokenKey in nextTermFrequency.keys():
             futureTokenFrequency = nextTermFrequency[presentTokenKey]
             frequencySum = sum(futureTokenFrequency.values())
@@ -51,19 +59,43 @@ class MarkovLearner():
         #print(nextTermFrequency['"'])
 
     '''
-    Store all words that start a sentence (ie follow a .)
+    Deques can't be hashed since they are mutable
     '''
-    def saveSentenceStartWords(self, tokens):
-        prev = None
-        current = None
+    def convertToTuple(self, myDeque):
+        return tuple(myDeque)
+
+    '''
+    Store all word chains that start a sentence (ie follow a .)
+    '''
+    def saveSentenceStarts(self):
+        window = deque()
         sentenceStartWords = []
+        lengthCounter = 0
+        foundEnd = False
         for token in self.tokens:
-            current = token
-            if ((prev == None or prev == '.') and current[0].isupper()):
-                sentenceStartWords.append(current)
-            prev = current
+            if (lengthCounter < self.length):
+                window.append(token)
+                lengthCounter += 1
+                if (lengthCounter == self.length):
+                    if ('.' not in window):
+                        sentenceStartWords.append(list(window))
+                    else:
+                        foundEnd = True
+            else:
+                window.popleft()
+                window.append(token)
+                if (foundEnd):
+                    if ('.' not in window):
+                        sentenceStartWords.append(list(window))
+                        foundEnd = False
+                else:
+                    if ('.' in window):
+                        foundEnd = True                        
+
         self.sentenceStartWords = sentenceStartWords
-        #print("sentence start words: " + str(sentenceStartWords))
+        #print("sentence start words: " + str(sentenceStartWords[:25]))
+
+    #def containsInterme
 
     '''
     Take in a file name and spit out all the tokens in a list
@@ -80,8 +112,8 @@ class MarkovLearner():
     '''
     Generates the next token in the sentence given the current state
     '''
-    def getNextToken(self, currentWord):
-        futureTokenFrequency = self.nextTermFrequency[currentWord]
+    def getNextToken(self, currentState):
+        futureTokenFrequency = self.nextTermFrequency[currentState]
         randomValue = random.random()
         nextToken = None
         runningSum = 0
@@ -96,39 +128,44 @@ class MarkovLearner():
     '''
     Generate a sentence based on the trained corpus
     '''
-    def generateSentence(self, startingWord = None):
+    def generateSentence(self):
 
-        sentence = startingWord
-        if (sentence == None):
-            sentence = self.getRandomWord()
-        currentToken = sentence
+        sentence = ''
+        randomStart = self.getRandomStart()
+        for startingToken in randomStart:
+            if (startingToken in self.SENTENCE_NO_SPACE):
+                sentence += startingToken
+            else:
+                sentence += ' ' + startingToken
+            if (startingToken in self.SENTENCE_END):
+                return sentence
+        currentWindow = deque(randomStart)
         nextToken = None
         while (nextToken not in self.SENTENCE_END):
-            nextToken = self.getNextToken(currentToken)
+            nextToken = self.getNextToken(self.convertToTuple(currentWindow))
             if (nextToken in self.SENTENCE_NO_SPACE):
                 sentence += nextToken
             else:
                 sentence += ' ' + nextToken
-            currentToken = nextToken
+            currentWindow.popleft()
+            currentWindow.append(nextToken)
 
         return sentence
 
     '''
-    Gets a random word from the tokenized corpus
+    Gets a random start to a sentence
     '''
-    def getRandomWord(self, sentenceStart = True):
-        foundWord = '.'
-        wordCorpus = None
+    def getRandomStart(self):
 
-        if (sentenceStart):
-            wordCorpus = self.sentenceStartWords
-        else:
-            wordCorpus = self.tokens
+        done = False
+        foundStart = []
 
-        while (foundWord in self.SENTENCE_ALL_PUNCTUATION):
-            foundWord = random.choice(wordCorpus)
-        #print("random word: " + foundWord)
-        return foundWord
+        while (not done):
+            foundStart = random.choice(self.sentenceStartWords)
+            if (foundStart[0] not in self.SENTENCE_ALL_PUNCTUATION):
+                done = True
+        print("random start: " + str(foundStart))
+        return foundStart
 
     '''
     Generates a paragraph
@@ -145,7 +182,10 @@ class MarkovLearner():
 
 
 if __name__ == "__main__":
-    gen = MarkovLearner("HuckleberryFin.txt")
+
+    LENGTH = 3
+
+    gen = MarkovLearner("HuckleberryFin.txt", length=LENGTH)
 
     outputFile = open('random_huckleberry.txt', 'w')
     iterations = 10
@@ -153,10 +193,20 @@ if __name__ == "__main__":
         outputFile.write(gen.generateParagraph() + '\n')
     outputFile.close()
 
-    gen = MarkovLearner("JustinBieber.txt")
+    
+    gen = MarkovLearner("JustinBieber.txt", length=LENGTH)
 
     outputFile = open('random_bieber.txt', 'w')
     iterations = 10
     for x in range(iterations):
         outputFile.write(gen.generateParagraph() + '\n')
     outputFile.close()
+
+    gen = MarkovLearner("ProblemsOfPhilosophy.txt", length=LENGTH)
+
+    outputFile = open('random_philosophy.txt', 'w')
+    iterations = 10
+    for x in range(iterations):
+        outputFile.write(gen.generateParagraph() + '\n')
+    outputFile.close()
+    
