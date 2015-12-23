@@ -2,24 +2,38 @@ from tweepy.streaming import StreamListener
 from tweepy import OAuthHandler
 from tweepy import Stream
 import json
+import time
 
-#tokens here
+
 
 class StdOutListener(StreamListener):
 
-    def __init__(self):
+    def __init__(self, seconds):
         self.outputFile = open('text/tweets.txt', 'w')
+        self.startTime = time.time()
+        self.seconds = seconds
 
     def on_data(self, data):
         self.outputFile.write(data + '\n')
-        return True
+        currentTime = time.time()
+        if (currentTime - self.startTime < self.seconds):
+            return True
+        else:
+            return False
 
     def on_error(self, status):
         print(status)
 
-def getTweets(keywords):
+'''
+Gather tweets with they keywords for the number of seconds
+'''
+def getTweets(keywords, seconds):
+
+    startTime = time.time()
+    currentTime = time.time()
+
     print("Getting Tweets")
-    listener = StdOutListener()
+    listener = StdOutListener(seconds)
 
     #This handles Twitter authetification and the connection to Twitter Streaming API
     auth = OAuthHandler(consumer_key, consumer_secret)
@@ -39,5 +53,5 @@ def getTweetText():
         except:
             continue
 if __name__ == '__main__':
-    #getTweets(['Donald Trump'])
+    getTweets(['Donald Trump'], 7200)
     getTweetText()

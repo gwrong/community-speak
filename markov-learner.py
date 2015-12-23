@@ -225,3 +225,12 @@ if __name__ == "__main__":
         outputFile.write(gen.generateParagraph() + '\n')
     outputFile.close()
     '''
+
+    gen = MarkovLearner("text/DonaldTrumpTwitter.txt", length=LENGTH)
+
+    outputFile = open('random_trump_twitter.txt', 'w')
+    iterations = 10
+    for x in range(iterations):
+        outputFile.write(gen.generateParagraph() + '\n')
+    outputFile.close()
+    
