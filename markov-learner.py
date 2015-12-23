@@ -2,6 +2,8 @@ from nltk.tokenize import TweetTokenizer
 from collections import defaultdict
 from collections import deque
 import random
+from wordcloud import WordCloud
+import matplotlib.pyplot as plt
 
 #sentence start, use all end punctuation
 #
@@ -17,6 +19,7 @@ class MarkovLearner():
 
     def __init__(self, fileName, length = 1):
         self.length = length
+        self.fileName = fileName
         self.train(fileName)
 
     '''
@@ -164,7 +167,7 @@ class MarkovLearner():
             foundStart = random.choice(self.sentenceStartWords)
             if (foundStart[0] not in self.SENTENCE_ALL_PUNCTUATION):
                 done = True
-        print("random start: " + str(foundStart))
+        #print("random start: " + str(foundStart))
         return foundStart
 
     '''
@@ -180,21 +183,33 @@ class MarkovLearner():
                 paragraph += ' ' + self.generateSentence()
         return paragraph
 
+    '''
+    Generate a word cloud of the provided text
+    '''
+    def generateWordCloud(self):
+
+        # Generate a word cloud image
+        plt.imshow(WordCloud().generate(open(self.fileName).read()))
+        plt.axis("off")
+        plt.show()
+
+
 
 if __name__ == "__main__":
 
-    LENGTH = 3
+    LENGTH = 2
 
-    gen = MarkovLearner("HuckleberryFin.txt", length=LENGTH)
+    gen = MarkovLearner("text/HuckleberryFin.txt", length=LENGTH)
 
     outputFile = open('random_huckleberry.txt', 'w')
     iterations = 10
     for x in range(iterations):
         outputFile.write(gen.generateParagraph() + '\n')
     outputFile.close()
+    gen.generateWordCloud()
 
-    
-    gen = MarkovLearner("JustinBieber.txt", length=LENGTH)
+    '''
+    gen = MarkovLearner("text/JustinBieber.txt", length=LENGTH)
 
     outputFile = open('random_bieber.txt', 'w')
     iterations = 10
@@ -202,11 +217,11 @@ if __name__ == "__main__":
         outputFile.write(gen.generateParagraph() + '\n')
     outputFile.close()
 
-    gen = MarkovLearner("ProblemsOfPhilosophy.txt", length=LENGTH)
+    gen = MarkovLearner("text/ProblemsOfPhilosophy.txt", length=LENGTH)
 
     outputFile = open('random_philosophy.txt', 'w')
     iterations = 10
     for x in range(iterations):
         outputFile.write(gen.generateParagraph() + '\n')
     outputFile.close()
-    
+    '''
